@@ -2,7 +2,8 @@ package org
 
 import (
 	"fmt"
-	usersvc "org-service/users"
+	"org-service/helper"
+
 	"regexp"
 	"strings"
 
@@ -17,13 +18,23 @@ type orgApi struct {
 
 type OrgAPI interface {
 	AddOrg(req *AddOrgRequest) (res *OrgResponse, err error)
-	GetOrgs(req *IDRequest) (res *GetOrgsResponse, err error)
+	FindMyOrgs(req *IDRequest) (res []*OrgWithRole, err error)
 }
 
 func NewOrgService(db *gorm.DB, logger log.AllLogger) OrgAPI {
 	return &orgApi{db: db, logger: logger}
 }
 
+
+
+// @Summary      	Add Org
+// @Description		Validates user id, org name and org size, checks if org exists in DB by name or slug, if not a new organization with trial subscription will be created and then the created ID will be returned.
+// @Tags			Orgs
+// @Accept			json
+// @Produce			json
+// @Param			Authorization					header		string			true	"Authorization Key(e.g Bearer key)"
+// @Param			AddOrgRequest					body		AddOrgRequest	true	"AddOrgRequest"
+// @Success			200								{object}	OrgResponse
 func (s *orgApi) AddOrg(req *AddOrgRequest) (res *OrgResponse, err error) {
 	if req.UserID == 0 {
 		return nil, fmt.Errorf("user id is required")
@@ -35,7 +46,7 @@ func (s *orgApi) AddOrg(req *AddOrgRequest) (res *OrgResponse, err error) {
 		return nil, fmt.Errorf("size is required")
 	}
 
-	var user usersvc.User
+	var user User
 
 	if err := s.db.First(&user, req.UserID).Error; err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
@@ -59,7 +70,6 @@ func (s *orgApi) AddOrg(req *AddOrgRequest) (res *OrgResponse, err error) {
 		Name: req.Name,
 		Size: req.Size,
 		Slug: orgSlug,
-		UserID: user.ID,
 	}
 
 	result := s.db.Create(&newOrg)
@@ -67,37 +77,59 @@ func (s *orgApi) AddOrg(req *AddOrgRequest) (res *OrgResponse, err error) {
 		return nil, fmt.Errorf("failed to create org: %w", result.Error)
 	}
 
+	var ownerRole Role
+	if err := s.db.Where("name = ?", helper.OwnerRoleName).First(&ownerRole).Error; err != nil {
+		return nil, fmt.Errorf("failed to get owner role: %w", err)
+	}
+
+	var userOrgRole UserOrgRole
+	userOrgRole.OrgID = newOrg.ID
+	userOrgRole.UserID = user.ID
+	userOrgRole.RoleID = int(ownerRole.ID)
+	userOrgRole.Status = "active"
+	result = s.db.Table(UserOrgRoleTableName).Create(&userOrgRole)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to create user org role: %w", result.Error)
+	}
+
 	return &OrgResponse{
 		ID:   newOrg.ID,
 		Name: newOrg.Name,
-		Size: newOrg.Size,
 		Slug: newOrg.Slug,
 	}, nil
 }
 
-func (s *orgApi) GetOrgs(req *IDRequest) (res *GetOrgsResponse, err error) {
+// @Summary      	FindMyOrgs
+// @Description		Validates user is, will query DB the orgs that current user is linked to and then returns them in JSON.
+// @Tags			Orgs
+// @Produce			json
+// @Param			Authorization					header		string			true	"Authorization Key(e.g Bearer key)"
+// @Success			200								{array}	OrgWithRole
+// @Router			/orgs/me			[GET]
+func (s *orgApi) FindMyOrgs(req *IDRequest) (res []*OrgWithRole, err error) {
 	if req.UserID == 0 {
 		return nil, fmt.Errorf("user id is required")
 	}
 
-	orgs := []Org{}
+	rows, err := s.db.Table(OrgTableName).
+	Select("orgs.id", "orgs.name", "orgs.slug", "user_org_roles.role_id", "user_org_roles.user_id").
+	Joins("Left JOIN user_org_roles on user_org_roles.org_id = orgs.id").
+	Where("user_org_roles.user_id = ?", req.UserID).Rows()
+	if err != nil {
+		return nil, fmt.Errorf("failed to query orgs: %w", err)
+	}
+	defer rows.Close()
 
-	result := s.db.Find(&orgs)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to get orgs: %w", result.Error)
+	var orgRoles []*OrgWithRole
+
+	for rows.Next() {
+		onr := &OrgWithRole{}
+		err := rows.Scan(&onr.OrgID, &onr.Name, &onr.Slug, &onr.RoleID, &onr.UserID)
+		if err != nil {
+			fmt.Println("error scanning row", err)
+		}
+		orgRoles = append(orgRoles, onr)
 	}
 
-	orgResponses := []OrgResponse{}
-	for _, org := range orgs {
-		orgResponses = append(orgResponses, OrgResponse{
-			ID:   org.ID,
-			Name: org.Name,
-			Size: org.Size,
-			Slug: org.Slug,
-		})
-	}
-
-	return &GetOrgsResponse{
-		Orgs: orgResponses,
-	}, nil
+	return orgRoles, nil
 }

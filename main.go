@@ -3,16 +3,26 @@ package main
 import (
 	"os"
 
+	_ "org-service/docs"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/swagger"
+	"gopkg.in/gomail.v2"
 
 	"org-service/db"
 	"org-service/middleware"
 	orgsvc "org-service/org"
+	usersvc "org-service/users"
 )
 
 func main() {
+	uiAppUrl := ""
+	if os.Getenv("UI_APP_URL") != "" {
+		uiAppUrl = os.Getenv("UI_APP_URL")
+	}
 	app := fiber.New(fiber.Config{
 		BodyLimit: 10 * 1024 * 1024, // 10 MB
 	})
@@ -28,21 +38,39 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}	
 
+
 	defaultLogger := log.DefaultLogger()
 
 	authMiddleware := middleware.Authentication(os.Getenv("JWT_SECRET_KEY"))
+	rbac := middleware.NewRBAC(db)
 
 	apisRouter := app.Group("/api")
+	orgRoute := apisRouter.Group("/o/:orgId", authMiddleware, rbac.OrgAccess)
 
-	// Migrate the schema
-	
-	orgApiSvc := orgsvc.NewOrgHTTPTransport(orgsvc.NewOrgService(db, defaultLogger), defaultLogger)
-	
+	apisRouter.Get("/swagger/*", basicauth.New(basicauth.Config{
+		Users: map[string]string{
+			"influxo": "123123123",
+		},
+	}), swagger.HandlerDefault)
+
+	// Pass gomail dialer to user service
+	dialer := gomail.NewDialer("smtp.gmail.com", 587, os.Getenv("EMAIL_FROM"), os.Getenv("MAIL_PASSWORD"))
+
+
+	// Routes
+	orgRouter := apisRouter.Group("/org")
+
 	// Initialize service
+	orgApiSvc := orgsvc.NewOrgHTTPTransport(orgsvc.NewOrgService(db, defaultLogger), defaultLogger)
+	userApiSvc := usersvc.NewUserHTTPTransport(usersvc.NewUserService(db, dialer, uiAppUrl))
 	
 	// Register routes
-	orgsvc.RegisterRoutes(apisRouter, orgApiSvc, authMiddleware)
+	orgsvc.RegisterRoutes(orgRouter, orgApiSvc, authMiddleware)
+	usersvc.RegisterRoutes(orgRoute, userApiSvc, authMiddleware)
 	
-	db.AutoMigrate(&orgsvc.Org{})
+	db.AutoMigrate(
+		&orgsvc.Org{},
+		&orgsvc.UserOrgRole{},
+	)
 	app.Listen(":3002")
 }

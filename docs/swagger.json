@@ -1,0 +1,210 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/o/{orgId}/users/change-user-role": {
+            "put": {
+                "description": "Validates org id and user id, and new role id, will query DB in users for user by user id, then tries to change the role from admin to owner or vice-versa.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "ChangeUserRole",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization Key(e.g Bearer key)",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Org ID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ChangeUserRoleRequest",
+                        "name": "ChangeUserRoleRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/users.ChangeUserRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/users.StatusResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/o/{orgId}/users/change-user-status": {
+            "put": {
+                "description": "Validates org id and user id, and status, will try to find user by user id, then tries to change the status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "ChangeUserStatus",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization Key(e.g Bearer key)",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Org ID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ChangeUserStatusRequest",
+                        "name": "ChangeUserStatusRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/users.ChangeUserStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/users.StatusResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/orgs/me": {
+            "get": {
+                "description": "Validates user is, will query DB the orgs that current user is linked to and then returns them in JSON.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orgs"
+                ],
+                "summary": "FindMyOrgs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization Key(e.g Bearer key)",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/org.OrgWithRole"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "org.AddOrgRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "string"
+                }
+            }
+        },
+        "org.OrgResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "org.OrgWithRole": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "orgId": {
+                    "type": "integer"
+                },
+                "roleId": {
+                    "type": "integer"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "users.ChangeUserRoleRequest": {
+            "type": "object",
+            "properties": {
+                "newRoleId": {
+                    "type": "integer"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "users.ChangeUserStatusRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "users.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "boolean"
+                }
+            }
+        }
+    }
+}

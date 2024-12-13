@@ -41,3 +41,15 @@ func CtxUserID(c *fiber.Ctx) (int, error) {
 	}
 	return int(userID), nil
 }
+
+func CtxOrgID(c *fiber.Ctx) int {
+	usOrgRoleI := c.Locals("userOrgRole")
+	if usOrgRoleI == nil {
+		return 0
+	}
+	usOrgRole, ok := usOrgRoleI.(UserOrgRole)
+	if !ok {
+		return 0
+	}
+	return usOrgRole.OrgID
+}

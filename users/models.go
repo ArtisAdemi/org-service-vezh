@@ -1,5 +1,9 @@
 package users
 
+const (
+	UserTableName = "users"
+)
+
 type User struct {
 	ID            int     `gorm:"primaryKey"`
 	Email         string  `gorm:"unique"`
@@ -32,4 +36,20 @@ type GetUserRequest struct {
 
 type GetUserResponse struct {
 	User *User
+}
+
+type ChangeUserRoleRequest struct {
+	OrgID     int `json:"-"`
+	UserID    int `json:"userId"`
+	NewRoleID int `json:"newRoleId"`
+}
+
+type StatusResponse struct {
+	Status bool `json:"status"`
+}
+
+type ChangeUserStatusRequest struct {
+	OrgID  int    `json:"-"`
+	UserID int    `json:"userId"`
+	Status string `json:"status"`
 }

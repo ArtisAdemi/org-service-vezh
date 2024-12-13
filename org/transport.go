@@ -9,7 +9,7 @@ import (
 
 type OrgHTTPTransport interface {
 	AddOrg(c *fiber.Ctx) error
-	GetOrgs(c *fiber.Ctx) error
+	FindMyOrgs(c *fiber.Ctx) error
 }
 
 type orgHttpTransport struct {
@@ -42,7 +42,7 @@ func (s *orgHttpTransport) AddOrg(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-func (s *orgHttpTransport) GetOrgs(c *fiber.Ctx) error {
+func (s *orgHttpTransport) FindMyOrgs(c *fiber.Ctx) error {
 	req := &IDRequest{}
 	userId, err := middleware.CtxUserID(c)
 	if err != nil {
@@ -51,7 +51,7 @@ func (s *orgHttpTransport) GetOrgs(c *fiber.Ctx) error {
 
 	req.UserID = userId
 
-	res, err := s.orgApi.GetOrgs(req)
+	res, err := s.orgApi.FindMyOrgs(req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}

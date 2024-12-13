@@ -1,0 +1,140 @@
+definitions:
+  org.AddOrgRequest:
+    properties:
+      name:
+        type: string
+      size:
+        type: string
+    type: object
+  org.OrgResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      size:
+        type: string
+      slug:
+        type: string
+    type: object
+  org.OrgWithRole:
+    properties:
+      name:
+        type: string
+      orgId:
+        type: integer
+      roleId:
+        type: integer
+      slug:
+        type: string
+      userId:
+        type: integer
+    type: object
+  users.ChangeUserRoleRequest:
+    properties:
+      newRoleId:
+        type: integer
+      userId:
+        type: integer
+    type: object
+  users.ChangeUserStatusRequest:
+    properties:
+      status:
+        type: string
+      userId:
+        type: integer
+    type: object
+  users.StatusResponse:
+    properties:
+      status:
+        type: boolean
+    type: object
+info:
+  contact: {}
+paths:
+  /o/{orgId}/users/change-user-role:
+    put:
+      description: Validates org id and user id, and new role id, will query DB in
+        users for user by user id, then tries to change the role from admin to owner
+        or vice-versa.
+      parameters:
+      - description: Authorization Key(e.g Bearer key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: integer
+      - description: ChangeUserRoleRequest
+        in: body
+        name: ChangeUserRoleRequest
+        required: true
+        schema:
+          $ref: '#/definitions/users.ChangeUserRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/users.StatusResponse'
+      summary: ChangeUserRole
+      tags:
+      - Users
+  /o/{orgId}/users/change-user-status:
+    put:
+      description: Validates org id and user id, and status, will try to find user
+        by user id, then tries to change the status.
+      parameters:
+      - description: Authorization Key(e.g Bearer key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: integer
+      - description: ChangeUserStatusRequest
+        in: body
+        name: ChangeUserStatusRequest
+        required: true
+        schema:
+          $ref: '#/definitions/users.ChangeUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/users.StatusResponse'
+      summary: ChangeUserStatus
+      tags:
+      - Users
+  /orgs/me:
+    get:
+      description: Validates user is, will query DB the orgs that current user is
+        linked to and then returns them in JSON.
+      parameters:
+      - description: Authorization Key(e.g Bearer key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/org.OrgWithRole'
+            type: array
+      summary: FindMyOrgs
+      tags:
+      - Orgs
+swagger: "2.0"
