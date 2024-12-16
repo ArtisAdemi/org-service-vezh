@@ -1,7 +1,9 @@
 package users
 
 import (
+	"net/url"
 	"org-service/middleware"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -9,6 +11,7 @@ import (
 type UserHTTPTransport interface {
 	ChangeUserRole(c *fiber.Ctx) error
 	ChangeUserStatus(c *fiber.Ctx) error
+	InviteUser(c *fiber.Ctx) error
 }
 
 type userHTTPTransport struct {
@@ -45,6 +48,37 @@ func (s *userHTTPTransport) ChangeUserStatus(c *fiber.Ctx) error {
 	}
 
 	resp, err := s.userApi.ChangeUserStatus(req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(resp)
+}
+
+
+func (s *userHTTPTransport) InviteUser(c *fiber.Ctx) error {
+	req := &InviteUserRequest{}
+	req.OrgID = middleware.CtxOrgID(c)
+	req.Email = c.Params("email")
+	decodedEmail, err := url.QueryUnescape(req.Email)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	req.Email = decodedEmail
+	roleIdParam := c.Params("roleId")
+	roleId, err := strconv.Atoi(roleIdParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	req.RoleID = roleId
+	userId, err := middleware.CtxUserID(c)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	req.CurrentUserID = userId
+	req.CurrentRoleID = middleware.CtxRoleID(c)
+
+	resp, err := s.userApi.InviteUser(req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

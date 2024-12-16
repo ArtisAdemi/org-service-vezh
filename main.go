@@ -57,20 +57,17 @@ func main() {
 	dialer := gomail.NewDialer("smtp.gmail.com", 587, os.Getenv("EMAIL_FROM"), os.Getenv("MAIL_PASSWORD"))
 
 
-	// Routes
-	orgRouter := apisRouter.Group("/org")
-
 	// Initialize service
 	orgApiSvc := orgsvc.NewOrgHTTPTransport(orgsvc.NewOrgService(db, defaultLogger), defaultLogger)
 	userApiSvc := usersvc.NewUserHTTPTransport(usersvc.NewUserService(db, dialer, uiAppUrl))
 	
 	// Register routes
-	orgsvc.RegisterRoutes(orgRouter, orgApiSvc, authMiddleware)
-	usersvc.RegisterRoutes(orgRoute, userApiSvc, authMiddleware)
+	orgsvc.RegisterRoutes(apisRouter, orgApiSvc, authMiddleware)
+	usersvc.RegisterRoutes(apisRouter, orgRoute, userApiSvc, authMiddleware)
 	
 	db.AutoMigrate(
 		&orgsvc.Org{},
 		&orgsvc.UserOrgRole{},
 	)
-	app.Listen(":3002")
+		app.Listen(":3002")
 }

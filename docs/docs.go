@@ -15,6 +15,132 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/o/{orgId}/users/invite/{email}/{roleId}": {
+            "get": {
+                "description": "Validates email, role ID in request, checks in DB if req email exists with req orgId, if not generates a JWT token, send via email a UI app URL containing the token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "InviteUser",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization Key(e.g Bearer key)",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "OrgID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Email",
+                        "name": "email",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "RoleID",
+                        "name": "roleId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/users.StatusResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/orgs": {
+            "post": {
+                "description": "Validates user id, org name and org size, checks if org exists in DB by name or slug, if not a new organization with trial subscription will be created and then the created ID will be returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orgs"
+                ],
+                "summary": "Add Org",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization Key(e.g Bearer key)",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "AddOrgRequest",
+                        "name": "AddOrgRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/org.AddOrgRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/org.OrgResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/orgs/me": {
+            "get": {
+                "description": "Validates user is, will query DB the orgs that current user is linked to and then returns them in JSON.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orgs"
+                ],
+                "summary": "FindMyOrgs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization Key(e.g Bearer key)",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/org.OrgWithRole"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/o/{orgId}/users/change-user-role": {
             "put": {
                 "description": "Validates org id and user id, and new role id, will query DB in users for user by user id, then tries to change the role from admin to owner or vice-versa.",
@@ -100,38 +226,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/users.StatusResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/orgs/me": {
-            "get": {
-                "description": "Validates user is, will query DB the orgs that current user is linked to and then returns them in JSON.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Orgs"
-                ],
-                "summary": "FindMyOrgs",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Authorization Key(e.g Bearer key)",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/org.OrgWithRole"
-                            }
                         }
                     }
                 }

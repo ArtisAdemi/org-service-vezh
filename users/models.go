@@ -53,3 +53,11 @@ type ChangeUserStatusRequest struct {
 	UserID int    `json:"userId"`
 	Status string `json:"status"`
 }
+
+type InviteUserRequest struct {
+	Email         string `json:"email"`
+	RoleID        int    `json:"roleId"`
+	OrgID         int    `json:"orgId"`
+	CurrentUserID int    `json:"-"`
+	CurrentRoleID int    `json:"-"`
+}

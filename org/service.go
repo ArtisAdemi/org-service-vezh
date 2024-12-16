@@ -35,6 +35,7 @@ func NewOrgService(db *gorm.DB, logger log.AllLogger) OrgAPI {
 // @Param			Authorization					header		string			true	"Authorization Key(e.g Bearer key)"
 // @Param			AddOrgRequest					body		AddOrgRequest	true	"AddOrgRequest"
 // @Success			200								{object}	OrgResponse
+// @Router           /api/orgs                        [POST]	
 func (s *orgApi) AddOrg(req *AddOrgRequest) (res *OrgResponse, err error) {
 	if req.UserID == 0 {
 		return nil, fmt.Errorf("user id is required")
@@ -105,7 +106,7 @@ func (s *orgApi) AddOrg(req *AddOrgRequest) (res *OrgResponse, err error) {
 // @Produce			json
 // @Param			Authorization					header		string			true	"Authorization Key(e.g Bearer key)"
 // @Success			200								{array}	OrgWithRole
-// @Router			/orgs/me			[GET]
+// @Router			/api/orgs/me			[GET]
 func (s *orgApi) FindMyOrgs(req *IDRequest) (res []*OrgWithRole, err error) {
 	if req.UserID == 0 {
 		return nil, fmt.Errorf("user id is required")

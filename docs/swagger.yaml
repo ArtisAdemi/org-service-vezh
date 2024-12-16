@@ -52,6 +52,95 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/o/{orgId}/users/invite/{email}/{roleId}:
+    get:
+      consumes:
+      - application/json
+      description: Validates email, role ID in request, checks in DB if req email
+        exists with req orgId, if not generates a JWT token, send via email a UI app
+        URL containing the token.
+      parameters:
+      - description: Authorization Key(e.g Bearer key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: OrgID
+        in: path
+        name: orgId
+        required: true
+        type: integer
+      - description: Email
+        in: path
+        name: email
+        required: true
+        type: string
+      - description: RoleID
+        in: path
+        name: roleId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/users.StatusResponse'
+      summary: InviteUser
+      tags:
+      - Users
+  /api/orgs:
+    post:
+      consumes:
+      - application/json
+      description: Validates user id, org name and org size, checks if org exists
+        in DB by name or slug, if not a new organization with trial subscription will
+        be created and then the created ID will be returned.
+      parameters:
+      - description: Authorization Key(e.g Bearer key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: AddOrgRequest
+        in: body
+        name: AddOrgRequest
+        required: true
+        schema:
+          $ref: '#/definitions/org.AddOrgRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/org.OrgResponse'
+      summary: Add Org
+      tags:
+      - Orgs
+  /api/orgs/me:
+    get:
+      description: Validates user is, will query DB the orgs that current user is
+        linked to and then returns them in JSON.
+      parameters:
+      - description: Authorization Key(e.g Bearer key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/org.OrgWithRole'
+            type: array
+      summary: FindMyOrgs
+      tags:
+      - Orgs
   /o/{orgId}/users/change-user-role:
     put:
       description: Validates org id and user id, and new role id, will query DB in
@@ -115,26 +204,4 @@ paths:
       summary: ChangeUserStatus
       tags:
       - Users
-  /orgs/me:
-    get:
-      description: Validates user is, will query DB the orgs that current user is
-        linked to and then returns them in JSON.
-      parameters:
-      - description: Authorization Key(e.g Bearer key)
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/org.OrgWithRole'
-            type: array
-      summary: FindMyOrgs
-      tags:
-      - Orgs
 swagger: "2.0"

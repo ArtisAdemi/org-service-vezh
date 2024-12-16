@@ -2,8 +2,15 @@ package users
 
 import (
 	"fmt"
+	"org-service/helper"
 	orgsvc "org-service/org"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 
+	"github.com/golang-jwt/jwt/v4"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
@@ -27,6 +34,7 @@ type UserAPI interface {
 	GetUsers(req *IDRequest) (*GetUsersResponse, error)
 	ChangeUserRole(req *ChangeUserRoleRequest) (*StatusResponse, error)
 	ChangeUserStatus(req *ChangeUserStatusRequest) (*StatusResponse, error)
+	InviteUser(req *InviteUserRequest) (*StatusResponse, error)
 }
 
 func NewUserService(db *gorm.DB, dialer *gomail.Dialer, uiAppUrl string) UserAPI {
@@ -228,3 +236,271 @@ func (s *userApi) ChangeUserStatus(req *ChangeUserStatusRequest) (res *StatusRes
 	return &StatusResponse{Status: true}, nil
 }
 
+// @Summary      	InviteUser
+// @Description	Validates email, role ID in request, checks in DB if req email exists with req orgId, if not generates a JWT token, send via email a UI app URL containing the token.
+// @Tags			Users
+// @Accept			json
+// @Produce			json
+// @Param			Authorization			header		string	true	"Authorization Key(e.g Bearer key)"
+// @Param			orgId					path		int		true	"OrgID"
+// @Param			email					path		string	true	"Email"
+// @Param			roleId					path		int		true	"RoleID"
+// @Success			200						{object}		StatusResponse
+// @Router			/api/o/{orgId}/users/invite/{email}/{roleId}	[GET]
+func (s *userApi) InviteUser(req *InviteUserRequest) (res *StatusResponse, err error) {
+	if req.Email == "" {
+		return nil, fmt.Errorf("email is required")
+	}
+
+	if req.RoleID == 0 {
+		return nil, fmt.Errorf("roleId is required")
+	}
+
+	if req.OrgID == 0 {
+		return nil, fmt.Errorf("orgId is required")
+	}
+
+	if req.CurrentUserID == 0 {
+		return nil, fmt.Errorf("currentUserId is required")
+	}
+
+	if req.CurrentRoleID == 0 {
+		return nil, fmt.Errorf("currentRoleId is required")
+	}
+
+	req.Email = strings.TrimSpace(req.Email)
+
+	var userOrgCount int64
+	result := s.db.Table(orgsvc.UserOrgRoleTableName).
+		Joins("LEFT JOIN users AS u ON u.id=user_org_roles.user_id").
+		Where("u.email = ? AND user_org_roles.org_id = ? AND user_org_roles.status = ?", req.Email, req.OrgID, UserStatusActive).
+		Count(&userOrgCount)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if userOrgCount > 0 {
+		return nil, fmt.Errorf("user already has an active role in this organization")
+	}
+
+	var org orgsvc.Org
+	result = s.db.Table(orgsvc.OrgTableName).Where("id = ?", req.OrgID).First(&org)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	var cUser User
+	result = s.db.Table(UserTableName).Where("id = ?", req.CurrentUserID).First(&cUser)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	status := UserStatusPending
+	active := false
+
+	if req.CurrentRoleID == 1 || req.CurrentRoleID == 2 {
+		status = UserStatusActive
+		active = true
+	}
+
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+	claims["email"] = req.Email
+	claims["orgId"] = req.OrgID
+	claims["roleId"] = req.RoleID
+	claims["status"] = status
+
+
+	firstName := ""
+	lastName := ""
+	fullName := firstName + " " + lastName
+	if strings.TrimSpace(fullName) == "" {
+		fullName = org.Name
+	}
+
+	var user User
+	// Check if user exists
+	result = s.db.Where("email = ?", req.Email).First(&user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	currentUserFullName := cUser.FirstName + " " + cUser.LastName
+	claims["currentUserFullName"] = currentUserFullName
+
+	t, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		return nil, err
+	}
+
+	if user.ID == 0 {
+		if err := handleTotalUsersLimit(s.db, req.OrgID); err != nil {
+			return nil, err
+		}
+
+		if err := handleAdminRoleLimit(s.db, req.OrgID); err != nil {
+			return nil, err
+		}
+
+		if err := handleAdvisorRoleLimit(s.db, req.OrgID); err != nil {
+			return nil, err
+		}
+
+		// Generate hash pw
+		pwd := helper.RandomString(8)
+		pwh, err := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+
+		user.Email = req.Email
+		user.Password = string(pwh)
+		user.Active = active
+		user.VerifiedEmail = false
+
+		result = s.db.Omit("UpdatedAt").Create(&user)
+		if result.Error != nil {
+			return nil, result.Error
+		}
+	}
+
+	// Prevent relationship with status=invited creation if exists
+	var userOrgRoleCount int64
+	result = s.db.Table("user_org_roles").
+		Joins("LEFT JOIN users ON users.id = user_org_roles.user_id").
+		Where("users.id = ? AND user_org_roles.org_id = ? AND user_org_roles.status = ?", 
+			user.ID, req.OrgID, UserStatusInvited).
+    	Count(&userOrgRoleCount)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if userOrgRoleCount > 0 {
+		return nil, fmt.Errorf("user already has already been invited to this organization")
+	}
+
+	if userOrgRoleCount == 0 {
+		userOrgRole := orgsvc.UserOrgRole{
+			UserID: user.ID,
+			OrgID: req.OrgID,
+			RoleID: req.RoleID,
+			Status: UserStatusInvited,
+		}
+
+		result = s.db.Create(&userOrgRole)
+		if result.Error != nil {
+			return nil, result.Error
+		}
+
+	}
+
+	m := gomail.NewMessage()	
+		m.SetHeader("From", "influxoks@gmail.com")
+		m.SetHeader("To", user.Email)
+		m.SetHeader("Subject", "Vezhguesi: You're invited to join " + org.Name)
+		m.SetBody("text/html", fmt.Sprintf(`You've received an invitation!<br/><br/>
+
+			%s has invited you to join the Organization %s.<br/>
+			In order to access this Organization you must click the link below and continue registration: <br/><br/>
+
+			<a href='%s'>Accept Invitation</a><br/><br/>
+
+			Thank you, <br/>
+			Vezhguesi Team
+		`, fullName, org.Name, fmt.Sprintf(`%s/accept-invitation/%s`, s.uiAppUrl, t)))
+
+		err = s.dialer.DialAndSend(m)
+		if err != nil {
+			return nil, err
+	}
+
+	return &StatusResponse{Status: true}, nil
+}
+
+
+// Private helper funcs
+func handleTotalUsersLimit(db *gorm.DB, orgId int) error {
+	var totalUserCount int64
+	result := db.Table("user_org_roles").
+		Where("org_id = ?", orgId).
+		Count(&totalUserCount)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	var totalUserLimitStr string
+	result = db.Table("features").Select("value").
+		Joins("LEFT JOIN subscriptions AS s ON s.id=features.subscription_id").
+		Joins("LEFT JOIN orgs AS o ON o.subscription_id=s.id").
+		Where("o.id = ? AND features.key = ?", orgId, "MembersLimit").
+		Scan(&totalUserLimitStr)
+	if result.Error != nil {
+		return result.Error
+	}
+	totalUserLimit, err := strconv.Atoi(totalUserLimitStr)
+	if err != nil {
+		return err
+	}
+
+	if int(totalUserCount) >= totalUserLimit {
+		return fmt.Errorf("user creation has reached limit, consider upgrading your plan.")
+	}
+	return nil
+}
+
+func handleAdminRoleLimit(db *gorm.DB, orgId int) error {
+	var adminUserCount int64
+	result := db.Table("user_org_roles").
+		Where("org_id = ? AND role_id = ?", orgId, 2).
+		Count(&adminUserCount)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	var adminRoleLimitStr string
+	result = db.Table("features").Select("value").
+		Joins("LEFT JOIN subscriptions AS s ON s.id=features.subscription_id").
+		Joins("LEFT JOIN orgs AS o ON o.subscription_id=s.id").
+		Where("o.id = ? AND features.key = ?", orgId, "AdminRoleLimit").
+		Scan(&adminRoleLimitStr)
+	if result.Error != nil {
+		return result.Error
+	}
+	adminRoleLimit, err := strconv.Atoi(adminRoleLimitStr)
+	if err != nil {
+		return err
+	}
+	if int(adminUserCount) >= adminRoleLimit {
+		return fmt.Errorf("User admin roles has reached limit, consider upgrading your plan.")
+	}
+	return nil
+}
+
+func handleAdvisorRoleLimit(db *gorm.DB, orgId int) error {
+	var advisorUserCount int64
+	result := db.Table("user_org_roles").
+		Where("org_id = ? AND role_id = ?", orgId, 4).
+		Count(&advisorUserCount)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	var advisorRoleLimitStr string
+	result = db.Table("features").Select("value").
+		Joins("LEFT JOIN subscriptions AS s ON s.id=features.subscription_id").
+		Joins("LEFT JOIN orgs AS o ON o.subscription_id=s.id").
+		Where("o.id = ? AND features.key = ?", orgId, "MentorRoleLimit").
+		Scan(&advisorRoleLimitStr)
+	if result.Error != nil {
+		return result.Error
+	}
+	advisorRoleLimit, err := strconv.Atoi(advisorRoleLimitStr)
+	if err != nil {
+		return err
+	}
+	if int(advisorUserCount) >= advisorRoleLimit {
+		return fmt.Errorf("User mentor roles has reached limit, consider upgrading your plan.")
+	}
+	return nil
+}
