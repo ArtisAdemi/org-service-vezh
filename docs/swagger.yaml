@@ -30,6 +30,34 @@ definitions:
       userId:
         type: integer
     type: object
+  users.AcceptInvitationRequest:
+    properties:
+      confirmPassword:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      password:
+        type: string
+      token:
+        type: string
+      username:
+        type: string
+    type: object
+  users.AcceptInvitationResponse:
+    properties:
+      inviteAccepted:
+        type: boolean
+      orgSlug:
+        type: string
+      roleId:
+        type: integer
+      status:
+        type: string
+      token:
+        type: string
+    type: object
   users.ChangeUserRoleRequest:
     properties:
       newRoleId:
@@ -141,6 +169,36 @@ paths:
       summary: FindMyOrgs
       tags:
       - Orgs
+  /api/users/invite/accept/{token}:
+    post:
+      consumes:
+      - application/json
+      description: Validates token, username, firstName, lastName, password and confirmPassword,
+        then check in DB if user with same email and org is already connected if not
+        creates User, Profile and Org Relationship and returns created user ID in
+        response.
+      parameters:
+      - description: Token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: AcceptInvitationRequest
+        in: body
+        name: AcceptInvitationRequest
+        required: true
+        schema:
+          $ref: '#/definitions/users.AcceptInvitationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/users.AcceptInvitationResponse'
+      summary: InviteAccept
+      tags:
+      - Users
   /o/{orgId}/users/change-user-role:
     put:
       description: Validates org id and user id, and new role id, will query DB in

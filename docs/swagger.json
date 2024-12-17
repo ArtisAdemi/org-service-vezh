@@ -130,6 +130,47 @@
                 }
             }
         },
+        "/api/users/invite/accept/{token}": {
+            "post": {
+                "description": "Validates token, username, firstName, lastName, password and confirmPassword, then check in DB if user with same email and org is already connected if not creates User, Profile and Org Relationship and returns created user ID in response.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "InviteAccept",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "AcceptInvitationRequest",
+                        "name": "AcceptInvitationRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/users.AcceptInvitationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/users.AcceptInvitationResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/o/{orgId}/users/change-user-role": {
             "put": {
                 "description": "Validates org id and user id, and new role id, will query DB in users for user by user id, then tries to change the role from admin to owner or vice-versa.",
@@ -267,6 +308,49 @@
                 },
                 "userId": {
                     "type": "integer"
+                }
+            }
+        },
+        "users.AcceptInvitationRequest": {
+            "type": "object",
+            "properties": {
+                "confirmPassword": {
+                    "type": "string"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "users.AcceptInvitationResponse": {
+            "type": "object",
+            "properties": {
+                "inviteAccepted": {
+                    "type": "boolean"
+                },
+                "orgSlug": {
+                    "type": "string"
+                },
+                "roleId": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
                 }
             }
         },

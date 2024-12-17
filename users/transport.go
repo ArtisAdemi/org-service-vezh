@@ -5,6 +5,8 @@ import (
 	"org-service/middleware"
 	"strconv"
 
+	"github.com/gofiber/fiber/v2/log"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -12,10 +14,12 @@ type UserHTTPTransport interface {
 	ChangeUserRole(c *fiber.Ctx) error
 	ChangeUserStatus(c *fiber.Ctx) error
 	InviteUser(c *fiber.Ctx) error
+	AcceptInvitation(c *fiber.Ctx) error
 }
 
 type userHTTPTransport struct {
 	userApi UserAPI
+	logger *log.AllLogger
 }
 
 func NewUserHTTPTransport(userApi UserAPI) UserHTTPTransport {
@@ -79,6 +83,22 @@ func (s *userHTTPTransport) InviteUser(c *fiber.Ctx) error {
 	req.CurrentRoleID = middleware.CtxRoleID(c)
 
 	resp, err := s.userApi.InviteUser(req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (s *userHTTPTransport) AcceptInvitation(c *fiber.Ctx) error {
+	req := &AcceptInvitationRequest{}
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	req.Token = c.Params("token")
+
+	resp, err := s.userApi.AcceptInvitation(req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
