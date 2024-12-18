@@ -9,7 +9,7 @@ definitions:
   org.OrgMembers:
     properties:
       user:
-        $ref: '#/definitions/org.User'
+        $ref: '#/definitions/org.UserResponse'
       userOrgRole:
         $ref: '#/definitions/org.UserOrgRoleResponse'
     type: object
@@ -44,7 +44,18 @@ definitions:
       userId:
         type: integer
     type: object
-  org.User:
+  org.UserOrgRoleResponse:
+    properties:
+      orgId:
+        type: integer
+      roleId:
+        type: integer
+      status:
+        type: string
+      userId:
+        type: integer
+    type: object
+  org.UserResponse:
     properties:
       active:
         type: boolean
@@ -58,31 +69,12 @@ definitions:
         type: integer
       lastName:
         type: string
-      orgID:
-        type: integer
-      password:
-        type: string
       phone:
-        type: string
-      role:
         type: string
       status:
         type: string
       username:
         type: string
-      verifiedEmail:
-        type: boolean
-    type: object
-  org.UserOrgRoleResponse:
-    properties:
-      orgId:
-        type: integer
-      roleId:
-        type: integer
-      status:
-        type: string
-      userId:
-        type: integer
     type: object
   users.AcceptInvitationRequest:
     properties:

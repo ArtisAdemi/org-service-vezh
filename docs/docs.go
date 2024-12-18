@@ -325,7 +325,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "user": {
-                    "$ref": "#/definitions/org.User"
+                    "$ref": "#/definitions/org.UserResponse"
                 },
                 "userOrgRole": {
                     "$ref": "#/definitions/org.UserOrgRoleResponse"
@@ -380,7 +380,24 @@ const docTemplate = `{
                 }
             }
         },
-        "org.User": {
+        "org.UserOrgRoleResponse": {
+            "type": "object",
+            "properties": {
+                "orgId": {
+                    "type": "integer"
+                },
+                "roleId": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "org.UserResponse": {
             "type": "object",
             "properties": {
                 "active": {
@@ -401,16 +418,7 @@ const docTemplate = `{
                 "lastName": {
                     "type": "string"
                 },
-                "orgID": {
-                    "type": "integer"
-                },
-                "password": {
-                    "type": "string"
-                },
                 "phone": {
-                    "type": "string"
-                },
-                "role": {
                     "type": "string"
                 },
                 "status": {
@@ -418,26 +426,6 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
-                },
-                "verifiedEmail": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "org.UserOrgRoleResponse": {
-            "type": "object",
-            "properties": {
-                "orgId": {
-                    "type": "integer"
-                },
-                "roleId": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "userId": {
-                    "type": "integer"
                 }
             }
         },
