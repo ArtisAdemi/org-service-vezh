@@ -608,6 +608,7 @@ func (s *userApi) AcceptInvitation(req *AcceptInvitationRequest) (res *AcceptInv
 		user.LastName = req.LastName
 		user.Username = &req.UserName
 		user.Active = true
+		user.Role = "user" //this will change later because we don't need this field
 		user.VerifiedEmail = true
 
 		result = s.db.Omit("UpdatedAt").Create(&user)

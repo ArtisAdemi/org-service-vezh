@@ -62,7 +62,7 @@ func main() {
 	userApiSvc := usersvc.NewUserHTTPTransport(usersvc.NewUserService(db, dialer, uiAppUrl))
 	
 	// Register routes
-	orgsvc.RegisterRoutes(apisRouter, orgApiSvc, authMiddleware)
+	orgsvc.RegisterRoutes(apisRouter, orgRoute, orgApiSvc, authMiddleware)
 	usersvc.RegisterRoutes(apisRouter, orgRoute, userApiSvc, authMiddleware)
 	
 	db.AutoMigrate(

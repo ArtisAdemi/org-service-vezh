@@ -19,6 +19,7 @@ type orgApi struct {
 type OrgAPI interface {
 	AddOrg(req *AddOrgRequest) (res *OrgResponse, err error)
 	FindMyOrgs(req *IDRequest) (res []*OrgWithRole, err error)
+	GetOrgMembers(req *OrgRequest) (res *OrgMembersResponse, err error)
 }
 
 func NewOrgService(db *gorm.DB, logger log.AllLogger) OrgAPI {
@@ -133,4 +134,94 @@ func (s *orgApi) FindMyOrgs(req *IDRequest) (res []*OrgWithRole, err error) {
 	}
 
 	return orgRoles, nil
+}
+
+
+// @Summary      	GetOrgMembers
+// @Description		Validates user is, will query DB the orgs that current user is linked to and then returns them in JSON.
+// @Tags			Orgs
+// @Produce			json
+// @Param			Authorization					header		string			true	"Authorization Key(e.g Bearer key)"
+// @Param			orgId							path		int			true	"OrgID"
+// @Success			200								{object}	OrgMembersResponse
+// @Router			/api/o/{orgId}/members		[GET]
+func (s *orgApi) GetOrgMembers(req *OrgRequest) (res *OrgMembersResponse, err error) {
+	if req.UserID == 0 {
+		return nil, fmt.Errorf("user id is required")
+	}
+
+	// Check if user is a member of the org
+	var userOrgRole UserOrgRole
+	
+	if req.OrgID == 0 {
+		return nil , fmt.Errorf("org id is required")
+	} 
+    
+	result := s.db.Table(UserOrgRoleTableName).
+		Where("user_id = ?", req.UserID).
+		Where("org_id = ?", req.OrgID).
+		First(&userOrgRole)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to get user org role: %w", result.Error)
+	}
+
+	if userOrgRole.UserID == 0 {
+		return nil, fmt.Errorf("user is not a member of the org")
+	}
+
+
+	// Get all users in the org
+	var users []User
+	result = s.db.Table("users").
+	        Joins("LEFT JOIN user_org_roles AS uor on uor.user_id = users.id").
+			Where("uor.org_id = ?", userOrgRole.OrgID).
+			Find(&users)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to get users: %w", result.Error)
+	}
+
+	var userOrgRoles []UserOrgRole
+	result = s.db.Table("user_org_roles").
+			Where("org_id = ?", userOrgRole.OrgID).
+			Find(&userOrgRoles)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to get user org roles: %w", result.Error)
+	}
+
+	var userOrgRoleResponses []UserOrgRoleResponse
+	for _, userOrgRole := range userOrgRoles {
+		userOrgRoleResponses = append(userOrgRoleResponses, UserOrgRoleResponse{
+			UserID: userOrgRole.UserID,
+			OrgID:  userOrgRole.OrgID,
+			RoleID: userOrgRole.RoleID,
+			Status: userOrgRole.Status,
+		})
+	}
+
+	var userResponses []UserResponse
+	for _, user := range users {
+		userResponses = append(userResponses, UserResponse{
+			ID:       user.ID,
+			Email:    user.Email,
+			Username: *user.Username,
+			FirstName: user.FirstName,
+			LastName: user.LastName,
+			Status: user.Status,
+			AvatarImgKey: user.AvatarImgKey,
+			Active: user.Active,
+			Phone: user.Phone,
+		})
+	}
+
+	var orgMembers []OrgMembers
+	for i, _ := range users {
+		orgMembers = append(orgMembers, OrgMembers{
+			UserOrgRole: userOrgRoleResponses[i],
+			User:        userResponses[i],
+		})
+	}
+
+	return &OrgMembersResponse{
+		OrgMembers: orgMembers,
+	}, nil
 }

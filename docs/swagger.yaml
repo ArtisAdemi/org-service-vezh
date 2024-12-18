@@ -6,6 +6,20 @@ definitions:
       size:
         type: string
     type: object
+  org.OrgMembers:
+    properties:
+      user:
+        $ref: '#/definitions/org.User'
+      userOrgRole:
+        $ref: '#/definitions/org.UserOrgRoleResponse'
+    type: object
+  org.OrgMembersResponse:
+    properties:
+      orgMembers:
+        items:
+          $ref: '#/definitions/org.OrgMembers'
+        type: array
+    type: object
   org.OrgResponse:
     properties:
       id:
@@ -26,6 +40,46 @@ definitions:
       roleId:
         type: integer
       slug:
+        type: string
+      userId:
+        type: integer
+    type: object
+  org.User:
+    properties:
+      active:
+        type: boolean
+      avatarImgKey:
+        type: string
+      email:
+        type: string
+      firstName:
+        type: string
+      id:
+        type: integer
+      lastName:
+        type: string
+      orgID:
+        type: integer
+      password:
+        type: string
+      phone:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+      username:
+        type: string
+      verifiedEmail:
+        type: boolean
+    type: object
+  org.UserOrgRoleResponse:
+    properties:
+      orgId:
+        type: integer
+      roleId:
+        type: integer
+      status:
         type: string
       userId:
         type: integer
@@ -80,6 +134,31 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/o/{orgId}/members:
+    get:
+      description: Validates user is, will query DB the orgs that current user is
+        linked to and then returns them in JSON.
+      parameters:
+      - description: Authorization Key(e.g Bearer key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: OrgID
+        in: path
+        name: orgId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/org.OrgMembersResponse'
+      summary: GetOrgMembers
+      tags:
+      - Orgs
   /api/o/{orgId}/users/invite/{email}/{roleId}:
     get:
       consumes:

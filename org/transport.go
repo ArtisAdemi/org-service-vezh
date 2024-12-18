@@ -1,7 +1,9 @@
 package org
 
 import (
+	"fmt"
 	"org-service/middleware"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -10,6 +12,7 @@ import (
 type OrgHTTPTransport interface {
 	AddOrg(c *fiber.Ctx) error
 	FindMyOrgs(c *fiber.Ctx) error
+	GetOrgMembers(c *fiber.Ctx) error
 }
 
 type orgHttpTransport struct {
@@ -58,3 +61,29 @@ func (s *orgHttpTransport) FindMyOrgs(c *fiber.Ctx) error {
 
 	return c.JSON(res)
 }
+
+func (s *orgHttpTransport) GetOrgMembers(c *fiber.Ctx) error {
+	req := &OrgRequest{}
+	userId, err := middleware.CtxUserID(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).SendString("Unauthorized")
+	}
+
+	orgIdStr := c.Params("orgId")
+	fmt.Println("orgIdStr", orgIdStr)
+	orgId, err := strconv.Atoi(orgIdStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid org id")
+	}
+
+	req.UserID = userId
+	req.OrgID = orgId
+
+	resp, err := s.orgApi.GetOrgMembers(req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+
+	return c.JSON(resp)
+}
+

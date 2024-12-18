@@ -4,6 +4,42 @@
         "contact": {}
     },
     "paths": {
+        "/api/o/{orgId}/members": {
+            "get": {
+                "description": "Validates user is, will query DB the orgs that current user is linked to and then returns them in JSON.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orgs"
+                ],
+                "summary": "GetOrgMembers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization Key(e.g Bearer key)",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "OrgID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/org.OrgMembersResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/o/{orgId}/users/invite/{email}/{roleId}": {
             "get": {
                 "description": "Validates email, role ID in request, checks in DB if req email exists with req orgId, if not generates a JWT token, send via email a UI app URL containing the token.",
@@ -274,6 +310,28 @@
                 }
             }
         },
+        "org.OrgMembers": {
+            "type": "object",
+            "properties": {
+                "user": {
+                    "$ref": "#/definitions/org.User"
+                },
+                "userOrgRole": {
+                    "$ref": "#/definitions/org.UserOrgRoleResponse"
+                }
+            }
+        },
+        "org.OrgMembersResponse": {
+            "type": "object",
+            "properties": {
+                "orgMembers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/org.OrgMembers"
+                    }
+                }
+            }
+        },
         "org.OrgResponse": {
             "type": "object",
             "properties": {
@@ -304,6 +362,67 @@
                     "type": "integer"
                 },
                 "slug": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "org.User": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "avatarImgKey": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "orgID": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "verifiedEmail": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "org.UserOrgRoleResponse": {
+            "type": "object",
+            "properties": {
+                "orgId": {
+                    "type": "integer"
+                },
+                "roleId": {
+                    "type": "integer"
+                },
+                "status": {
                     "type": "string"
                 },
                 "userId": {
