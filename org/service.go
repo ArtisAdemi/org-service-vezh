@@ -166,25 +166,40 @@ func (s *orgApi) GetOrgMembers(req *OrgRequest) (*OrgMembersResponse, error) {
 			continue // Skip if user not found
 		}
 
-		orgMembers = append(orgMembers, OrgMembers{
-			UserOrgRole: UserOrgRoleResponse{
-				UserID: uor.UserID,
-				OrgID:  uor.OrgID,
-				RoleID: uor.RoleID,
-				Status: uor.Status,
-			},
-			User: UserResponse{
-				ID:           user.ID,
-				Email:        user.Email,
-				Username:     *user.Username,
-				FirstName:    user.FirstName,
-				LastName:     user.LastName,
-				Status:       user.Status,
-				AvatarImgKey: user.AvatarImgKey,
-				Active:       user.Active,
-				Phone:        user.Phone,
-			},
-		})
+		if user.Username == nil {
+			orgMembers = append(orgMembers, OrgMembers{
+				UserOrgRole: UserOrgRoleResponse{
+					UserID: uor.UserID,
+					OrgID:  uor.OrgID,
+					RoleID: uor.RoleID,
+					Status: uor.Status,
+				},
+				User: UserResponse{
+					ID:           user.ID,
+					Email:        user.Email,
+					Username:     *user.Username,
+					FirstName:    user.FirstName,
+					LastName:     user.LastName,
+					Status:       user.Status,
+					AvatarImgKey: user.AvatarImgKey,
+					Active:       user.Active,
+					Phone:        user.Phone,
+				},
+			})
+		} else {
+			orgMembers = append(orgMembers, OrgMembers{
+				UserOrgRole: UserOrgRoleResponse{
+					UserID: uor.UserID,
+					OrgID:  uor.OrgID,
+					RoleID: uor.RoleID,
+					Status: uor.Status,
+				},
+				User: UserResponse{
+					ID:           user.ID,
+				},
+			})
+		}
+
 	}
 
 	return &OrgMembersResponse{
