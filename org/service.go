@@ -166,7 +166,7 @@ func (s *orgApi) GetOrgMembers(req *OrgRequest) (*OrgMembersResponse, error) {
 			continue // Skip if user not found
 		}
 
-		if user.Username == nil {
+		if user.Username != nil {
 			orgMembers = append(orgMembers, OrgMembers{
 				UserOrgRole: UserOrgRoleResponse{
 					UserID: uor.UserID,
