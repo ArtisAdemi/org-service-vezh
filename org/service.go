@@ -19,7 +19,7 @@ type orgApi struct {
 type OrgAPI interface {
 	AddOrg(req *AddOrgRequest) (res *OrgResponse, err error)
 	FindMyOrgs(req *IDRequest) (res []*OrgWithRole, err error)
-	GetOrgMembers(req *OrgRequest) (*OrgMembersResponse, error)
+	GetOrgMembers(req *OrgRequest) (res *OrgMembersResponse, err error)
 }
 
 func NewOrgService(db *gorm.DB, logger log.AllLogger) OrgAPI {
